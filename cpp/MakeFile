@@ -1,0 +1,27 @@
+CXX := g++
+CXXFLAGS := -std=c++20 -O2 \
+ -I./include \
+ -I./include/ml_kem \
+ -I./include/sha3 \
+ -I./include/subtle \
+ -I./include/randomshake
+
+LIB_NAME := mlkem512.dll
+TEST_EXE := test_main.exe
+
+LIB_SRC  := src/mlkem_512_c_api.cpp
+TEST_SRC := src/test_main.cpp
+
+all: $(LIB_NAME) $(TEST_EXE)
+
+$(LIB_NAME): $(LIB_SRC)
+	$(CXX) $(CXXFLAGS) -shared -o $(LIB_NAME) $(LIB_SRC)
+
+$(TEST_EXE): $(TEST_SRC) $(LIB_SRC)
+	$(CXX) $(CXXFLAGS) -o $(TEST_EXE) $(TEST_SRC) $(LIB_SRC)
+
+run: $(TEST_EXE)
+	./$(TEST_EXE)
+
+clean:
+	del /Q $(LIB_NAME) $(TEST_EXE) 2>nul || true
