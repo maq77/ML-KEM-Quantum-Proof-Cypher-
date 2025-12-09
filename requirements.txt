@@ -1,0 +1,6 @@
+# ML-KEM-512 Quantum-Safe Encryption Demo
+# All dependencies are from the Python standard library.
+# No third-party packages are required.
+
+# This line just documents the expected Python version.
+python>=3.10
