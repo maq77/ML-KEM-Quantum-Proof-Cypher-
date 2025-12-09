@@ -1,8 +1,3 @@
-Perfect — here is a **clean, professional, professor-ready `README.md`** that explains **everything for Windows & Linux**, build, run, GUI, crypto logic, automation, and troubleshooting.
-You can copy this **exactly as-is** into `README.md`.
-
----
-
 # 🛡️ ML-KEM-512 Quantum-Safe Encryption GUI
 
 **Post-Quantum Cryptography Demo using C++ Core + Python GUI**
@@ -276,4 +271,5 @@ By studying this project, you gain:
 ✅ A **diagram of ML-KEM internals for academic submission**
 
 Just tell me 👍
+
 
