@@ -1,3 +1,8 @@
+Perfect — here is a **clean, professional, professor-ready `README.md`** that explains **everything for Windows & Linux**, build, run, GUI, crypto logic, automation, and troubleshooting.
+You can copy this **exactly as-is** into `README.md`.
+
+---
+
 # 🛡️ ML-KEM-512 Quantum-Safe Encryption GUI
 
 **Post-Quantum Cryptography Demo using C++ Core + Python GUI**
@@ -75,9 +80,9 @@ ML-KEM/
 ├── main.py                 # Application entry point
 ├── requirements.txt
 ├── README.md
-├── run.bat       # Windows run script
+├── run_mlkem_gui.bat       # Windows run script
 ├── bootstrap_linux.sh      # Linux auto-install + build + run
-└── run.sh  # Linux run-only
+└── run_mlkem_gui_linux.sh  # Linux run-only
 ```
 
 ---
@@ -128,7 +133,7 @@ python main.py
 OR double-click:
 
 ```
-run.bat
+run_mlkem_gui.bat
 ```
 
 The GUI will start immediately.
@@ -155,8 +160,8 @@ This will automatically:
 ### ✅ After First Build (Run Only)
 
 ```bash
-chmod +x run.sh
-./run.sh
+chmod +x run_mlkem_gui_linux.sh
+./run_mlkem_gui_linux.sh
 ```
 
 ---
@@ -266,10 +271,22 @@ By studying this project, you gain:
 ✅ Cross-platform deployment practices
 
 ---
+
+## 🏁 Conclusion
+
+This project represents a **full quantum-safe encryption workflow using real NIST-standard algorithms**, implemented in a professional, modular, and cross-platform manner suitable for:
+
+* University projects
+* Crypto practical exams
+* Research demonstrations
+* Security presentations
+
+---
+
+If you want, I can also provide:
+
 ✅ A **1-page theoretical PDF explanation for your report**
 ✅ A **presentation PowerPoint for your defense**
 ✅ A **diagram of ML-KEM internals for academic submission**
 
 Just tell me 👍
-
-

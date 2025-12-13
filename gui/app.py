@@ -7,6 +7,8 @@ from tkinter import ttk, filedialog, messagebox
 from core.mlkem_ffi import MLKEM512
 from core.stream_cipher import SimpleStreamCipher
 from core.key_store import KeyStore, KeyPair
+from core.symmetric.registry import SYMMETRIC_ALGS
+from core.symmetric import kdf_sha256
 
 
 class MLKEMGuiApp:
@@ -29,7 +31,7 @@ class MLKEMGuiApp:
 
         # Cipher scheme selection (only ML-KEM implemented)
         self.cipher_var = tk.StringVar(
-            value="ML-KEM-512 + SimpleStreamCipher (Quantum-safe)"
+            value="ML-KEM-512 + AES/DES (Quantum-safe)"
         )
 
         self._build_ui()
@@ -47,7 +49,7 @@ class MLKEMGuiApp:
         # Title
         title = ttk.Label(
             main,
-            text="ML-KEM-512 + SimpleStreamCipher\n(C++ quantum-safe core + Python GUI)",
+            text="ML-KEM-512(Key Gen) + AES/DES\n(C++ quantum-safe core + Python GUI)",
             font=("Segoe UI", 12, "bold"),
         )
         title.grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 10))
@@ -59,12 +61,7 @@ class MLKEMGuiApp:
         cipher_box = ttk.Combobox(
             main,
             textvariable=self.cipher_var,
-            values=[
-                "ML-KEM-512 + SimpleStreamCipher (Quantum-safe)",
-                "AES-256-GCM (placeholder)",
-                "ChaCha20-Poly1305 (placeholder)",
-                "RSA-2048 + AES-256 (placeholder)",
-            ],
+            values=list(SYMMETRIC_ALGS.keys()),
             state="readonly",
         )
         cipher_box.grid(row=1, column=1, columnspan=3, sticky="ew", pady=(0, 5))
@@ -128,7 +125,7 @@ class MLKEMGuiApp:
         # --- Decrypt section ---
         ttk.Label(
             main,
-            text="Decrypt (Decapsulate + Stream Cipher):",
+            text="Decrypt (Decapsulate + AES/DES):",
             font=("Segoe UI", 10, "bold"),
         ).grid(row=10, column=0, columnspan=4, sticky="w")
 
@@ -315,26 +312,34 @@ class MLKEMGuiApp:
         if path:
             self.plain_in_var.set(path)
 
-    def on_encrypt(self):
-        # Only ML-KEM implemented
-        if not self.cipher_var.get().startswith("ML-KEM-512"):
-            messagebox.showinfo(
-                "Not implemented",
-                "Currently only 'ML-KEM-512 + SimpleStreamCipher' is implemented in this demo.",
-            )
-            return
+    def _get_selected_symmetric(self):
+        """
+        Returns (scheme_label, mode, WrapperClass) from SYMMETRIC_ALGS registry.
+        """
+        scheme_label = self.cipher_var.get()
+        if scheme_label not in SYMMETRIC_ALGS:
+            raise ValueError(f"Unknown symmetric scheme: {scheme_label}")
 
+        # Expected registry format: { "AES-256-CBC": ("AES", "CBC", AESWrapper), ... }
+        _, mode, Wrapper = SYMMETRIC_ALGS[scheme_label]
+        return scheme_label, mode, Wrapper
+
+    def _derive_sym_key(self, shared_secret: bytes, Wrapper):
+        """
+        Derive a symmetric key of exact length needed by the wrapper.
+        """
+        key_len = Wrapper.key_len_bytes() 
+        return kdf_sha256(shared_secret, key_len)
+
+
+    def on_encrypt(self):
         if self.keypair is None:
-            messagebox.showerror(
-                "Error", "You must generate or load a keypair first."
-            )
+            messagebox.showerror("Error", "You must generate or load a keypair first.")
             return
 
         in_path = self.plain_in_var.get()
         if not in_path or not os.path.exists(in_path):
-            messagebox.showerror(
-                "Error", "Please choose a valid plaintext file."
-            )
+            messagebox.showerror("Error", "Please choose a valid plaintext file.")
             return
 
         out_path = filedialog.asksaveasfilename(
@@ -347,49 +352,81 @@ class MLKEMGuiApp:
 
         try:
             self._set_busy(True)
-            start = time.perf_counter()
+            t0 = time.perf_counter()
 
+            # 1) Read plaintext
             with open(in_path, "rb") as f:
                 plaintext = f.read()
 
-            # Encapsulate to get ML-KEM shared secret
-            ct, ss = self.kem.encaps(self.keypair.public_key)
-            cipher = SimpleStreamCipher(ss)
-            stream_ct = cipher.encrypt(plaintext)
+            # 2) Choose symmetric algorithm (AES/DES) from dropdown
+            scheme_label, mode, Wrapper = self._get_selected_symmetric()
 
+            # 3) ML-KEM encapsulation -> (kem_ciphertext, shared_secret)
+            t_kem0 = time.perf_counter()
+            kem_ct, shared_secret = self.kem.encaps(self.keypair.public_key)
+            t_kem_ms = (time.perf_counter() - t_kem0) * 1000
+
+            # 4) Derive symmetric key from shared secret using KDF
+            t_kdf0 = time.perf_counter()
+            sym_key = self._derive_sym_key(shared_secret, Wrapper)
+            t_kdf_ms = (time.perf_counter() - t_kdf0) * 1000
+
+            # 5) Symmetric encrypt
+            t_sym0 = time.perf_counter()
+            sym_ct, sym_iv = Wrapper.encrypt(sym_key, plaintext, mode)
+            t_sym_ms = (time.perf_counter() - t_sym0) * 1000
+
+            total_ms = (time.perf_counter() - t0) * 1000
+
+            # 6) Save bundle (IMPORTANT: unified structure)
             bundle = {
-                "scheme": "ML-KEM-512 + SimpleStreamCipher",
-                "pkey_hex": self.keypair.public_key.hex(),
-                "ciphertext_mlkem_hex": ct.hex(),
-                "stream_ciphertext_hex": stream_ct.hex(),
+                "scheme": f"ML-KEM-512 + {scheme_label}",
+                "mlkem": {
+                    "ciphertext_hex": kem_ct.hex(),
+                },
+                "symmetric": {
+                    "alg": scheme_label,
+                    "mode": mode,
+                    "iv_hex": sym_iv.hex() if sym_iv else "",
+                    "ciphertext_hex": sym_ct.hex(),
+                    "kdf": "kdf_sha256(shared_secret) -> sym_key",
+                    "key_len_bytes": len(sym_key),
+                },
+                "meta": {
+                    "input_filename": os.path.basename(in_path),
+                    "plaintext_len": len(plaintext),
+                    "timing_ms": {
+                        "kem_encaps": round(t_kem_ms, 3),
+                        "kdf": round(t_kdf_ms, 3),
+                        "sym_encrypt": round(t_sym_ms, 3),
+                        "total": round(total_ms, 3),
+                    },
+                },
             }
 
             with open(out_path, "w", encoding="utf-8") as f:
                 json.dump(bundle, f, indent=2)
 
-            elapsed_ms = (time.perf_counter() - start) * 1000
             self.bundle_out_var.set(out_path)
-            self.status_var.set(
-                f"Encrypted and saved bundle to {out_path} in {elapsed_ms:.2f} ms"
-            )
-            self._story_reset("Encrypting with ML-KEM-512 + Stream Cipher")
-            self._story_animate(
-                [
-                    "Step 1: Using the public key to hide a random secret in lattice noise.",
-                    "Step 2: Deriving a 32-byte shared secret from the encapsulated message.",
-                    "Step 3: Expanding the shared secret into a keystream with SHA-256.",
-                    "Step 4: XOR-ing keystream with your file bytes (stream cipher).",
-                    f"Done: bundle.json contains ML-KEM ciphertext + encrypted file (in {elapsed_ms:.2f} ms).",
-                ]
-            )
-            messagebox.showinfo(
-                "Success", "Encapsulation + encryption complete."
-            )
+            self.status_var.set(f"Encrypted using {scheme_label} in {total_ms:.2f} ms → {out_path}")
+
+            self._story_reset("Hybrid Encryption (ML-KEM + AES/DES)")
+            self._story_animate([
+                "Step 1: Read plaintext bytes from file.",
+                "Step 2: ML-KEM encapsulation → (KEM ciphertext + shared secret).",
+                f"Step 3: KDF derives {len(sym_key)}-byte symmetric key.",
+                f"Step 4: Encrypt plaintext using {scheme_label} ({mode}).",
+                "Step 5: Save bundle.json with KEM ciphertext + symmetric ciphertext + IV + timings.",
+                f"Done in {total_ms:.2f} ms.",
+            ])
+
+            messagebox.showinfo("Success", f"Encryption complete using {scheme_label}.")
         except Exception as e:
             messagebox.showerror("Error", f"Encryption failed:\n{e}")
             self._story_append(f"Error: {e}")
         finally:
             self._set_busy(False)
+
 
     # -------------------------------------------------------------------------
     # Decrypt handlers
@@ -403,25 +440,13 @@ class MLKEMGuiApp:
             self.bundle_in_var.set(path)
 
     def on_decrypt(self):
-        # Only ML-KEM implemented
-        if not self.cipher_var.get().startswith("ML-KEM-512"):
-            messagebox.showinfo(
-                "Not implemented",
-                "Currently only 'ML-KEM-512 + SimpleStreamCipher' is implemented in this demo.",
-            )
-            return
-
         if self.keypair is None:
-            messagebox.showerror(
-                "Error", "You must load the matching secret keypair first."
-            )
+            messagebox.showerror("Error", "You must load the matching secret keypair first.")
             return
 
         bundle_path = self.bundle_in_var.get()
         if not bundle_path or not os.path.exists(bundle_path):
-            messagebox.showerror(
-                "Error", "Please choose a valid cipher bundle file."
-            )
+            messagebox.showerror("Error", "Please choose a valid cipher bundle file.")
             return
 
         out_path = filedialog.asksaveasfilename(
@@ -434,49 +459,64 @@ class MLKEMGuiApp:
 
         try:
             self._set_busy(True)
-            start = time.perf_counter()
+            t0 = time.perf_counter()
 
             with open(bundle_path, "r", encoding="utf-8") as f:
                 bundle = json.load(f)
 
-            ct_hex = bundle["ciphertext_mlkem_hex"]
-            stream_ct_hex = bundle["stream_ciphertext_hex"]
+            # --- Parse unified bundle structure ---
+            kem_ct = bytes.fromhex(bundle["mlkem"]["ciphertext_hex"])
 
-            ct = bytes.fromhex(ct_hex)
-            stream_ct = bytes.fromhex(stream_ct_hex)
+            sym = bundle["symmetric"]
+            scheme_label = sym["alg"]
+            mode = sym["mode"]
+            sym_ct = bytes.fromhex(sym["ciphertext_hex"])
+            iv_hex = sym.get("iv_hex", "")
+            sym_iv = bytes.fromhex(iv_hex) if iv_hex else b""
 
-            # Recover shared secret using secret key
-            ss = self.kem.decaps(ct, self.keypair.secret_key)
-            cipher = SimpleStreamCipher(ss)
-            plaintext = cipher.decrypt(stream_ct)
+            if scheme_label not in SYMMETRIC_ALGS:
+                raise ValueError(f"Bundle requests unknown symmetric alg: {scheme_label}")
+
+            _, _, Wrapper = SYMMETRIC_ALGS[scheme_label]
+
+            # 1) ML-KEM decapsulation -> shared secret
+            t_kem0 = time.perf_counter()
+            shared_secret = self.kem.decaps(kem_ct, self.keypair.secret_key)
+            t_kem_ms = (time.perf_counter() - t_kem0) * 1000
+
+            # 2) Re-derive symmetric key (same KDF)
+            t_kdf0 = time.perf_counter()
+            sym_key = self._derive_sym_key(shared_secret, Wrapper)
+            t_kdf_ms = (time.perf_counter() - t_kdf0) * 1000
+
+            # 3) Symmetric decrypt
+            t_sym0 = time.perf_counter()
+            plaintext = Wrapper.decrypt(sym_key, sym_ct, mode, sym_iv)
+            t_sym_ms = (time.perf_counter() - t_sym0) * 1000
 
             with open(out_path, "wb") as f:
                 f.write(plaintext)
 
-            elapsed_ms = (time.perf_counter() - start) * 1000
+            total_ms = (time.perf_counter() - t0) * 1000
             self.plain_out_var.set(out_path)
-            self.status_var.set(
-                f"Decrypted plaintext saved to {out_path} in {elapsed_ms:.2f} ms"
-            )
-            self._story_reset("Decrypting with ML-KEM-512 + Stream Cipher")
-            self._story_animate(
-                [
-                    "Step 1: Using the secret key to decode the lattice ciphertext.",
-                    "Step 2: Recovering the same 32-byte shared secret.",
-                    "Step 3: Regenerating the same keystream with SHA-256.",
-                    "Step 4: XOR-ing keystream with the stream ciphertext to recover the file.",
-                    f"Done: plaintext restored from bundle in {elapsed_ms:.2f} ms.",
-                ]
-            )
-            messagebox.showinfo(
-                "Success", "Decapsulation + decryption complete."
-            )
+            self.status_var.set(f"Decrypted using {scheme_label} in {total_ms:.2f} ms → {out_path}")
+
+            self._story_reset("Hybrid Decryption (ML-KEM + AES/DES)")
+            self._story_animate([
+                "Step 1: Load bundle.json and extract KEM + symmetric parts.",
+                "Step 2: ML-KEM decapsulation → shared secret recovered.",
+                f"Step 3: KDF regenerates the same {len(sym_key)}-byte symmetric key.",
+                f"Step 4: Decrypt using {scheme_label} ({mode}) + IV.",
+                "Step 5: Write plaintext back to file.",
+                f"Done in {total_ms:.2f} ms.",
+            ])
+
+            messagebox.showinfo("Success", f"Decryption complete using {scheme_label}.")
         except Exception as e:
             messagebox.showerror("Error", f"Decryption failed:\n{e}")
             self._story_append(f"Error: {e}")
         finally:
             self._set_busy(False)
-
 
 def run():
     root = tk.Tk()
