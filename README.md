@@ -1,10 +1,7 @@
----
-
 # 🛡️ ML-KEM-512 Quantum-Safe Encryption GUI
 
 **Post-Quantum Cryptography Demo using C++ Core + Python GUI**
 
----
 
 ## 📌 Overview
 
