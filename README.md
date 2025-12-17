@@ -254,34 +254,4 @@ All failures produce **safe GUI alerts**.
 
 ---
 
-## 🚀 Learning Outcomes
-
-By studying this project, you gain:
-
-✅ Understanding of **Post-Quantum Cryptography**
-✅ Knowledge of **hybrid encryption systems**
-✅ Experience with **C++ ↔ Python FFI**
-✅ Secure **cryptographic software architecture design**
-✅ Cross-platform deployment practices
-
----
-
-## 🏁 Conclusion
-
-This project represents a **full quantum-safe encryption workflow using real NIST-standard algorithms**, implemented in a professional, modular, and cross-platform manner suitable for:
-
-* University projects
-* Crypto practical exams
-* Research demonstrations
-* Security presentations
-
----
-
-If you want, I can also provide:
-
-✅ A **1-page theoretical PDF explanation for your report**
-✅ A **presentation PowerPoint for your defense**
-✅ A **diagram of ML-KEM internals for academic submission**
-
-Just tell me 👍
 
