@@ -1,0 +1,125 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{cite}
+
+\title{Performance Evaluation of Hybrid Post-Quantum Encryption Using ML-KEM and AES-CTR}
+
+\author{
+\IEEEauthorblockN{Mohamed Amin}
+\IEEEauthorblockA{
+Faculty of Computers and Information\\
+Egypt\\
+}
+}
+
+\begin{document}
+\maketitle
+
+% ================= ABSTRACT =================
+\begin{abstract}
+The transition to post-quantum cryptography is essential to protect modern communication systems
+against quantum-enabled adversaries.
+Hybrid encryption schemes, which combine post-quantum key encapsulation mechanisms with
+efficient symmetric encryption, represent a practical and secure migration strategy.
+This paper presents a comprehensive performance evaluation of a hybrid encryption framework
+integrating the NIST-standardized ML-KEM algorithm with AES-256 in CTR mode.
+Through extensive benchmarking on file sizes ranging from 1 MB to 500 MB,
+we demonstrate that the computational overhead introduced by post-quantum key exchange
+remains constant and negligible relative to bulk encryption costs.
+Experimental results confirm that hybrid post-quantum encryption achieves strong security guarantees
+with minimal performance degradation, making it suitable for real-world deployment.
+\end{abstract}
+
+% ================= INTRODUCTION =================
+\section{Introduction}
+The emergence of large-scale quantum computers poses a significant threat to classical public-key
+cryptographic algorithms such as RSA and ECC.
+To mitigate this risk, the cryptographic community has developed post-quantum algorithms
+designed to resist quantum attacks.
+However, direct replacement of existing cryptographic infrastructure is often impractical due to
+performance and compatibility constraints.
+
+Hybrid encryption schemes provide a practical migration path by combining post-quantum key
+establishment with well-established symmetric encryption for bulk data protection.
+In this work, we evaluate a hybrid design based on ML-KEM for key encapsulation and AES-256-CTR
+for data encryption, focusing on performance scalability and real-world applicability.
+
+% ================= SYSTEM DESIGN =================
+\section{System Design}
+The evaluated hybrid encryption framework follows the Key Encapsulation Mechanism / Data
+Encapsulation Mechanism (KEM/DEM) paradigm.
+ML-KEM is used to securely establish a shared secret between communicating parties,
+while AES-256 in CTR mode encrypts the actual payload.
+
+The hybrid encryption process consists of three sequential phases:
+\begin{enumerate}
+    \item ML-KEM encapsulation to generate a shared secret
+    \item Key derivation using SHA-256
+    \item AES-256-CTR encryption of the data payload
+\end{enumerate}
+
+This design ensures post-quantum security for key exchange while preserving the high throughput
+of symmetric encryption.
+
+% ================= METHODOLOGY =================
+\section{Experimental Methodology}
+All experiments were conducted on the same hardware platform under identical conditions.
+Each benchmark was executed 30 times, preceded by three warm-up iterations to stabilize cache
+and runtime behavior.
+
+We measured the following metrics:
+\begin{itemize}
+    \item Mean encryption time
+    \item Standard deviation
+    \item 95\% confidence interval
+    \item Throughput for AES-CTR
+\end{itemize}
+
+File sizes of 1 MB, 50 MB, and 500 MB were selected to evaluate scalability across small,
+medium, and large payloads.
+
+\input{equations.tex}
+
+% ================= RESULTS =================
+\section{Results and Analysis}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_compare_systems.png}
+\caption{Encryption time comparison of AES-only, ML-KEM-only, and hybrid encryption schemes}
+\end{figure}
+
+\input{tables.tex}
+
+Results demonstrate that ML-KEM encapsulation and decapsulation exhibit nearly constant execution
+time regardless of file size.
+In contrast, AES-CTR encryption scales linearly with payload size, dominating total execution time
+for large files.
+
+The hybrid scheme introduces only a small constant overhead compared to AES-only encryption,
+confirming the theoretical performance model.
+
+% ================= USE CASES =================
+\section{Use Case Analysis}
+The evaluated hybrid encryption framework is well suited for a wide range of applications,
+including secure messaging, encrypted cloud storage, virtual private networks,
+and real-time voice and video communication.
+Its scalability and low overhead make it particularly suitable for defense,
+financial, and critical infrastructure systems requiring long-term security guarantees.
+
+% ================= CONCLUSION =================
+\section{Conclusion}
+This paper presented a detailed performance evaluation of a hybrid post-quantum encryption
+scheme based on ML-KEM and AES-256-CTR.
+Experimental results confirm that post-quantum key encapsulation introduces negligible overhead
+for large payloads while maintaining strong security guarantees.
+These findings validate hybrid encryption as a practical and efficient solution
+for post-quantum secure communication.
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

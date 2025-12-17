@@ -1,0 +1,20 @@
+\begin{equation}
+T_{\text{hybrid}}(n) =
+T_{\text{KEM}} +
+T_{\text{KDF}} +
+T_{\text{AES}}(n)
+\end{equation}
+
+\begin{equation}
+T_{\text{AES}}(n) = \alpha n + \beta
+\end{equation}
+
+\begin{equation}
+\text{Throughput} =
+\frac{n}{T_{\text{AES}}(n)}
+\end{equation}
+
+\begin{equation}
+\lim_{n \to \infty}
+\frac{T_{\text{KEM}}}{T_{\text{hybrid}}(n)} = 0
+\end{equation}

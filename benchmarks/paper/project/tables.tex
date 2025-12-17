@@ -1,0 +1,22 @@
+\begin{table}[t]
+\centering
+\caption{Encryption Performance Comparison}
+\label{tab:performance}
+\begin{tabular}{lccc}
+\toprule
+System & Size (MB) & Time (ms) & CI$_{95\%}$ \\
+\midrule
+AES-CTR & 1.0 & 2.29 & $\pm$0.22 \\
+AES-CTR & 50.0 & 87.19 & $\pm$7.78 \\
+AES-CTR & 500.0 & 1017.85 & $\pm$112.44 \\
+\midrule
+Hybrid (ML-KEM + AES-CTR) & 1.0 & 2.06 & $\pm$0.12 \\
+Hybrid (ML-KEM + AES-CTR) & 50.0 & 148.69 & $\pm$6.06 \\
+Hybrid (ML-KEM + AES-CTR) & 500.0 & 1029.25 & $\pm$132.95 \\
+\midrule
+ML-KEM (encaps/decaps) & 1.0 & 0.16 & $\pm$0.02 \\
+ML-KEM (encaps/decaps) & 50.0 & 0.28 & $\pm$0.01 \\
+ML-KEM (encaps/decaps) & 500.0 & 0.15 & $\pm$0.00 \\
+\bottomrule
+\end{tabular}
+\end{table}

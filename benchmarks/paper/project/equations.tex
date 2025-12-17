@@ -1,0 +1,32 @@
+\section{Performance Model}
+
+The execution time of AES-256-CTR encryption grows linearly with the size of the input data.
+This behavior can be modeled as:
+
+\begin{equation}
+T_{\text{AES}}(n) = \alpha n + \beta
+\end{equation}
+
+where \(n\) denotes the plaintext size in bytes,
+\(\alpha\) represents the per-byte processing cost,
+and \(\beta\) accounts for constant initialization overhead.
+
+The total execution time of the hybrid encryption scheme is defined as:
+
+\begin{equation}
+T_{\text{Hybrid}}(n) =
+T_{\text{KEM}} + T_{\text{KDF}} + T_{\text{AES}}(n)
+\end{equation}
+
+Here, \(T_{\text{KEM}}\) represents the ML-KEM encapsulation cost,
+and \(T_{\text{KDF}}\) denotes the key derivation cost.
+Both terms are independent of message size.
+
+To quantify measurement reliability, we compute 95\% confidence intervals as:
+
+\begin{equation}
+CI_{95\%} = \bar{x} \pm 1.96 \cdot \frac{\sigma}{\sqrt{N}}
+\end{equation}
+
+where \(\bar{x}\) is the sample mean,
+\(\s
