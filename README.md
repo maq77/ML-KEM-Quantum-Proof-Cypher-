@@ -1,6 +1,3 @@
-Perfect — here is a **clean, professional, professor-ready `README.md`** that explains **everything for Windows & Linux**, build, run, GUI, crypto logic, automation, and troubleshooting.
-You can copy this **exactly as-is** into `README.md`.
-
 ---
 
 # 🛡️ ML-KEM-512 Quantum-Safe Encryption GUI
@@ -290,3 +287,4 @@ If you want, I can also provide:
 ✅ A **diagram of ML-KEM internals for academic submission**
 
 Just tell me 👍
+
